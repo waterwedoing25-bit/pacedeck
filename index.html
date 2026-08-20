@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaceDeck — 7-Zone Swim Pacing Calculator for Coaches</title>
+<meta name="description" content="Turn one test time into a full 7-zone pacing chart for your whole squad. Works offline, no subscription. £9.99 one-time, free for Patreon supporters.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #091822;
+    --bg-alt: #0C202C;
+    --panel: #102A38;
+    --panel-2: #143649;
+    --line: rgba(255,255,255,0.08);
+    --line-strong: rgba(255,255,255,0.14);
+    --teal: #1C7C8C;
+    --teal-bright: #38C6DB;
+    --yellow: #FFC94D;
+    --yellow-dim: #E0A93A;
+    --foam: #EAF6F8;
+    --mist: #86A2B0;
+    --mist-dim: #5C7784;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 16px 44px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03);
+    --shadow-glow-yellow: 0 0 0 1px rgba(255,201,77,0.3), 0 8px 24px rgba(255,201,77,0.18);
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --white-color: #F0F0F0;
+    --pink-color: #FFB6C1;
+    --red-color: #FF6B6B;
+    --blue-color: #4A90D9;
+    --purple-color: #9B59B6;
+    --green-color: #48BB78;
+    --gold-color: #F6AD55;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(28,124,140,0.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(255,201,77,0.06), transparent 55%),
+      var(--bg);
+    color: var(--foam);
+    line-height: 1.5;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+  img, svg { display: block; max-width: 100%; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 90px 0; }
+  @media (max-width: 700px) { section { padding: 60px 0; } }
+
+  /* ---- Nav ---- */
+  nav {
+    position: sticky; top: 0; z-index: 50; backdrop-filter: blur(14px);
+    background: rgba(9,24,34,0.75); border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; }
+  nav .brand { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.3px; }
+  nav .brand .accent { color: var(--yellow); }
+  nav .nav-links { display: flex; gap: 28px; font-size: 14px; font-weight: 500; color: var(--mist); }
+  nav .nav-links a:hover { color: var(--foam); }
+  nav .nav-cta {
+    background: var(--yellow); color: #17222B; padding: 9px 18px; border-radius: 9px; font-weight: 700;
+    font-size: 13.5px; font-family: 'Space Grotesk', sans-serif; text-decoration: none; box-shadow: var(--shadow-glow-yellow);
+    transition: var(--transition);
+  }
+  nav .nav-cta:hover { background: var(--yellow-dim); transform: translateY(-1px); }
+  @media (max-width: 700px) { nav .nav-links { display: none; } }
+
+  /* ---- Buttons ---- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700;
+    font-size: 15px; font-family: 'Space Grotesk', sans-serif; text-decoration: none; transition: var(--transition);
+    border: 1.5px solid transparent; cursor: pointer;
+  }
+  .btn-primary { background: var(--yellow); color: #17222B; box-shadow: var(--shadow-glow-yellow); }
+  .btn-primary:hover { background: var(--yellow-dim); transform: translateY(-2px); }
+  .btn-secondary { background: rgba(255,255,255,0.05); color: var(--foam); border-color: var(--line-strong); }
+  .btn-secondary:hover { background: rgba(255,255,255,0.09); border-color: var(--teal-bright); transform: translateY(-2px); }
+  .btn small { font-weight: 500; opacity: 0.75; font-family: 'Inter', sans-serif; }
+
+  /* ---- Lane line signature (reused directly from the app) ---- */
+  .lane-line { display: flex; border-radius: 12px; overflow: hidden; height: 8px; box-shadow: var(--shadow); border: 1px solid var(--line-strong); }
+  .lane-line .seg { flex: 1; }
+  .lane-line-divider { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- Hero ---- */
+  .hero { padding: 80px 0 40px; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ''; position: absolute; top: -20%; right: -10%; width: 55%; height: 160%;
+    background: radial-gradient(circle, rgba(56,198,219,0.14), transparent 65%); pointer-events: none;
+  }
+  .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; position: relative; z-index: 1; }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+  .hero .eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--teal-bright); font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .hero .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: #4FD1A5; box-shadow: 0 0 8px #4FD1A5; }
+  .hero h1 { font-size: 46px; font-weight: 700; letter-spacing: -1.2px; line-height: 1.08; }
+  .hero h1 .accent { color: var(--yellow); }
+  @media (max-width: 700px) { .hero h1 { font-size: 32px; } }
+  .hero p.lead { font-size: 17px; color: var(--mist); margin-top: 20px; max-width: 460px; line-height: 1.6; }
+  .hero .cta-row { display: flex; gap: 14px; margin-top: 32px; flex-wrap: wrap; }
+  .hero .trust-row { display: flex; gap: 18px; margin-top: 26px; flex-wrap: wrap; font-size: 12.5px; color: var(--mist-dim); }
+  .hero .trust-row span { display: flex; align-items: center; gap: 6px; }
+  .hero .trust-row i { color: var(--teal-bright); }
+
+  /* ---- Hero visual: live recreation of TV Mode ---- */
+  .hero-visual {
+    background: #050D13; border-radius: 20px; border: 1px solid var(--line-strong); box-shadow: var(--shadow);
+    padding: 16px; position: relative; overflow: hidden;
+  }
+  .hero-visual::before {
+    content: ''; position: absolute; top: -15%; left: -10%; width: 55%; height: 55%; border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,198,219,0.18), transparent 68%); pointer-events: none;
+  }
+  .tv-topbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px 10px; position: relative; z-index: 1; }
+  .tv-topbar .tv-title { display: flex; align-items: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 12px; color: var(--mist); font-weight: 600; }
+  .tv-topbar .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #4FD1A5; box-shadow: 0 0 6px #4FD1A5; animation: pulseDot 1.8s ease-in-out infinite; }
+  .tv-topbar .tv-title span { color: var(--foam); }
+  .tv-topbar .tv-controls { font-size: 10.5px; color: var(--mist-dim); }
+  .tv-marquee {
+    height: 4px; border-radius: 3px; margin: 0 0 12px; position: relative; z-index: 1;
+    background: linear-gradient(90deg, #F0F0F0, #FFB6C1, #FF6B6B, #4A90D9, #9B59B6, #48BB78, #F6AD55, #F0F0F0, #FFB6C1, #FF6B6B, #4A90D9, #9B59B6, #48BB78, #F6AD55);
+    background-size: 200% 100%; animation: marqueeSweep 10s linear infinite; opacity: 0.85;
+  }
+  @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes marqueeSweep { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+  @keyframes cardBreathe {
+    0%, 100% { box-shadow: 0 6px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(56,198,219,0.10); }
+    50% { box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 22px rgba(56,198,219,0.2); }
+  }
+  .tv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; position: relative; z-index: 1; }
+  .tv-card {
+    background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border-radius: 14px; padding: 12px 14px; border: 1px solid var(--line-strong);
+    animation: cardBreathe 5s ease-in-out infinite;
+  }
+  .tv-card:nth-child(2) { animation-delay: 0.6s; }
+  .tv-card:nth-child(3) { animation-delay: 1.2s; }
+  .tv-card:nth-child(4) { animation-delay: 1.8s; }
+  .tv-card .tv-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .tv-card .tv-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; color: var(--foam); }
+  .tv-card .tv-stroke {
+    font-size: 10px; background: rgba(255,201,77,0.12); color: var(--yellow); border: 1px solid rgba(255,201,77,0.3);
+    padding: 2px 8px; border-radius: 20px; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+  }
+  .tv-times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .tv-chip {
+    border-radius: 8px; padding: 5px 2px; text-align: center; font-family: 'JetBrains Mono', monospace;
+  }
+  .tv-chip .tv-dist { display: block; font-size: 8px; font-family: 'Inter', sans-serif; font-weight: 600; opacity: 0.65; }
+  .tv-chip .tv-time { display: block; font-size: 12.5px; font-weight: 700; }
+
+  /* ---- Section headers ---- */
+  .section-head { text-align: center; max-width: 620px; margin: 0 auto 48px; }
+  .section-head .kicker {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--teal-bright); font-weight: 600; margin-bottom: 12px;
+  }
+  .section-head h2 { font-size: 32px; letter-spacing: -0.7px; }
+  .section-head p { color: var(--mist); margin-top: 12px; font-size: 15.5px; }
+
+  /* ---- Problem/story section ---- */
+  .story { max-width: 720px; margin: 0 auto; text-align: center; }
+  .story p { font-size: 17px; color: var(--mist); line-height: 1.75; }
+  .story p + p { margin-top: 18px; }
+  .story strong { color: var(--foam); }
+
+  /* ---- Product mockup cards (Calculate + Dashboard) ---- */
+  .mockup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 50px; }
+  @media (max-width: 850px) { .mockup-grid { grid-template-columns: 1fr; } }
+  .mockup-card {
+    background: var(--panel); border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow);
+    padding: 22px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .mockup-label { font-size: 13px; font-weight: 700; color: var(--mist); display: flex; align-items: center; gap: 8px; }
+  .mockup-label i { color: var(--teal-bright); }
+
+  .mock-results-header {
+    background: linear-gradient(135deg, #0E2E3B, #164A5C); border: 1px solid var(--line-strong); border-radius: 10px;
+    padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+  }
+  .mock-results-header .name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; }
+  .mock-results-header .meta { font-size: 12px; color: var(--mist); }
+  .mock-results-header .pace { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--yellow); font-size: 17px; }
+  .mock-zone-rows { display: flex; flex-direction: column; gap: 6px; }
+  .mock-zone-row { display: flex; align-items: center; gap: 10px; }
+  .mock-zone-row .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); }
+  .mock-zone-row .zname { font-size: 12.5px; color: var(--mist); width: 56px; flex-shrink: 0; }
+  .mock-zone-row .bar { flex: 1; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .mock-zone-row .bar span { display: block; height: 100%; border-radius: 4px; }
+  .mock-zone-row .time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--foam); width: 52px; text-align: right; flex-shrink: 0; }
+
+  .mock-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .mock-table th {
+    text-align: left; font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--mist-dim);
+    padding: 6px 8px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--line-strong);
+  }
+  .mock-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; color: var(--foam); }
+  .mock-table td.wname { font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+  .mock-table .zchip { display: inline-block; padding: 2px 7px; border-radius: 5px; font-weight: 700; }
+
+  /* ---- Features ---- */
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 850px) { .feature-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 550px) { .feature-grid { grid-template-columns: 1fr; } }
+  .feature-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 24px;
+    transition: var(--transition);
+  }
+  .feature-card:hover { border-color: rgba(56,198,219,0.35); transform: translateY(-3px); }
+  .feature-card i { color: var(--teal-bright); font-size: 20px; margin-bottom: 14px; display: block; }
+  .feature-card h3 { font-size: 15.5px; margin-bottom: 8px; }
+  .feature-card p { font-size: 13.5px; color: var(--mist); line-height: 1.6; }
+
+  /* ---- Pricing ---- */
+  .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 780px; margin: 0 auto; }
+  @media (max-width: 700px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .price-card {
+    background: var(--panel); border: 1.5px solid var(--line-strong); border-radius: var(--radius); padding: 32px 28px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .price-card.featured { border-color: var(--yellow); box-shadow: var(--shadow-glow-yellow); position: relative; }
+  .price-card.featured::before {
+    content: 'MOST FLEXIBLE'; position: absolute; top: -11px; left: 28px; background: var(--yellow); color: #17222B;
+    font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: 0.5px;
+  }
+  .price-card h3 { font-size: 18px; }
+  .price-card .price { font-family: 'JetBrains Mono', monospace; font-size: 36px; font-weight: 700; color: var(--foam); }
+  .price-card .price small { font-size: 14px; color: var(--mist); font-family: 'Inter', sans-serif; font-weight: 500; }
+  .price-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; color: var(--mist); }
+  .price-card ul li { display: flex; align-items: flex-start; gap: 9px; }
+  .price-card ul li i { color: var(--teal-bright); margin-top: 3px; flex-shrink: 0; }
+  .price-card .btn { justify-content: center; margin-top: 6px; }
+
+  /* ---- FAQ ---- */
+  .faq-list { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+  .faq-item { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+  .faq-item summary {
+    padding: 18px 22px; cursor: pointer; font-weight: 600; font-size: 14.5px; list-style: none; display: flex;
+    justify-content: space-between; align-items: center; font-family: 'Space Grotesk', sans-serif;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; font-size: 20px; color: var(--teal-bright); font-weight: 400; }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-item p { padding: 0 22px 20px; color: var(--mist); font-size: 13.5px; line-height: 1.6; }
+
+  /* ---- Final CTA ---- */
+  .final-cta {
+    text-align: center; background: linear-gradient(135deg, #0A2530, #123847); border: 1px solid var(--line-strong);
+    border-radius: 24px; padding: 64px 32px; max-width: 780px; margin: 0 auto; position: relative; overflow: hidden;
+  }
+  .final-cta::before {
+    content: ''; position: absolute; top: -30%; right: -10%; width: 55%; height: 200%;
+    background: radial-gradient(circle, rgba(56,198,219,0.14), transparent 65%); pointer-events: none;
+  }
+  .final-cta h2 { font-size: 30px; letter-spacing: -0.6px; position: relative; }
+  .final-cta p { color: var(--mist); margin: 14px 0 30px; font-size: 15.5px; position: relative; }
+  .final-cta .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; position: relative; }
+
+  /* ---- Footer ---- */
+  footer { border-top: 1px solid var(--line); padding: 40px 0; text-align: center; }
+  footer p { font-size: 12.5px; color: var(--mist-dim); }
+  footer .foot-links { display: flex; gap: 20px; justify-content: center; margin-bottom: 16px; font-size: 13px; }
+  footer .foot-links a:hover { color: var(--teal-bright); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tv-topbar .live-dot, .tv-marquee, .tv-card { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="accent">Pace</span>Deck</div>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a class="nav-cta" href="#pricing">Get PaceDeck</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow"><span class="dot"></span> 7-ZONE PACING · NO SUBSCRIPTION</div>
+      <h1>Stop doing pace math <span class="accent">on deck.</span></h1>
+      <p class="lead">Enter one test time. PaceDeck instantly builds a full 7-zone pacing chart for
+        your whole squad — then puts it up on the pool deck TV so nobody has to ask you their
+        splits again.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#pricing"><i class="fa-solid fa-mug-hot"></i> Get PaceDeck — £9.99</a>
+        <a class="btn btn-secondary" href="#pricing"><i class="fa-brands fa-patreon"></i> Free for Patreon supporters</a>
+      </div>
+      <div class="trust-row">
+        <span><i class="fas fa-wifi"></i> Works fully offline</span>
+        <span><i class="fas fa-lock"></i> Athlete data never leaves your device</span>
+        <span><i class="fas fa-ban"></i> No subscription, ever</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="tv-topbar">
+        <div class="tv-title"><span class="live-dot"></span>🏊 <span>PaceDeck</span> · Group Class</div>
+        <div class="tv-controls">TV Mode</div>
+      </div>
+      <div class="tv-marquee"></div>
+      <div class="tv-grid">
+        <div class="tv-card">
+          <div class="tv-card-head"><span class="tv-name">Annabella</span><span class="tv-stroke">Free · LCM</span></div>
+          <div class="tv-times">
+            <div class="tv-chip" style="background:#FF6B6B;color:#fff;"><span class="tv-dist">R · 100m</span><span class="tv-time">1:12.4</span></div>
+            <div class="tv-chip" style="background:#4A90D9;color:#fff;"><span class="tv-dist">B · 100m</span><span class="tv-time">1:08.9</span></div>
+            <div class="tv-chip" style="background:#9B59B6;color:#fff;"><span class="tv-dist">P · 100m</span><span class="tv-time">1:04.2</span></div>
+          </div>
+        </div>
+        <div class="tv-card">
+          <div class="tv-card-head"><span class="tv-name">Marcus</span><span class="tv-stroke">Fly · SCY</span></div>
+          <div class="tv-times">
+            <div class="tv-chip" style="background:#FF6B6B;color:#fff;"><span class="tv-dist">R · 100y</span><span class="tv-time">1:05.1</span></div>
+            <div class="tv-chip" style="background:#4A90D9;color:#fff;"><span class="tv-dist">B · 100y</span><span class="tv-time">1:01.7</span></div>
+            <div class="tv-chip" style="background:#9B59B6;color:#fff;"><span class="tv-dist">P · 100y</span><span class="tv-time">0:57.3</span></div>
+          </div>
+        </div>
+        <div class="tv-card">
+          <div class="tv-card-head"><span class="tv-name">Priya</span><span class="tv-stroke">Back · LCM</span></div>
+          <div class="tv-times">
+            <div class="tv-chip" style="background:#FF6B6B;color:#fff;"><span class="tv-dist">R · 100m</span><span class="tv-time">1:18.6</span></div>
+            <div class="tv-chip" style="background:#4A90D9;color:#fff;"><span class="tv-dist">B · 100m</span><span class="tv-time">1:14.8</span></div>
+            <div class="tv-chip" style="background:#9B59B6;color:#fff;"><span class="tv-dist">P · 100m</span><span class="tv-time">1:09.5</span></div>
+          </div>
+        </div>
+        <div class="tv-card">
+          <div class="tv-card-head"><span class="tv-name">Diego</span><span class="tv-stroke">Free · LCM</span></div>
+          <div class="tv-times">
+            <div class="tv-chip" style="background:#FF6B6B;color:#fff;"><span class="tv-dist">R · 100m</span><span class="tv-time">1:03.9</span></div>
+            <div class="tv-chip" style="background:#4A90D9;color:#fff;"><span class="tv-dist">B · 100m</span><span class="tv-time">1:00.5</span></div>
+            <div class="tv-chip" style="background:#9B59B6;color:#fff;"><span class="tv-dist">P · 100m</span><span class="tv-time">0:56.8</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="lane-line-divider">
+  <div class="lane-line">
+    <div class="seg" style="background:#F0F0F0;"></div>
+    <div class="seg" style="background:#FFB6C1;"></div>
+    <div class="seg" style="background:#FF6B6B;"></div>
+    <div class="seg" style="background:#4A90D9;"></div>
+    <div class="seg" style="background:#9B59B6;"></div>
+    <div class="seg" style="background:#48BB78;"></div>
+    <div class="seg" style="background:#F6AD55;"></div>
+  </div>
+</div>
+
+<section id="how-it-works">
+  <div class="wrap">
+    <div class="story">
+      <p>Every color-zone swim program runs into the same friction: the pacing chart is a
+        <strong>laminated sheet from three seasons ago</strong>, a spreadsheet only one person on
+        staff understands, or mental math done on deck between sets.</p>
+      <p>PaceDeck removes all three. <strong>One test time in, a full 7-zone pace chart out</strong> —
+        for any stroke, for LCM, SCM, or SCY — instantly, and pushed straight to a poolside TV so
+        the whole squad can check their own numbers without asking.</p>
+    </div>
+
+    <div class="mockup-grid">
+      <div class="mockup-card">
+        <div class="mockup-label"><i class="fas fa-calculator"></i> One test time in...</div>
+        <div class="mock-results-header">
+          <div>
+            <div class="name">Annabella</div>
+            <div class="meta">Freestyle · LCM · 400m: 4:52.0</div>
+          </div>
+          <div class="pace">1:12.1 <span style="font-size:11px;color:var(--mist);font-family:'Inter',sans-serif;">/100m</span></div>
+        </div>
+        <div class="mock-zone-rows">
+          <div class="mock-zone-row"><span class="dot" style="background:#F0F0F0;"></span><span class="zname">White</span><div class="bar"><span style="width:58%;background:#F0F0F0;"></span></div><span class="time">1:32.4</span></div>
+          <div class="mock-zone-row"><span class="dot" style="background:#FFB6C1;"></span><span class="zname">Pink</span><div class="bar"><span style="width:64%;background:#FFB6C1;"></span></div><span class="time">1:24.9</span></div>
+          <div class="mock-zone-row"><span class="dot" style="background:#FF6B6B;"></span><span class="zname">Red</span><div class="bar"><span style="width:74%;background:#FF6B6B;"></span></div><span class="time">1:12.4</span></div>
+          <div class="mock-zone-row"><span class="dot" style="background:#4A90D9;"></span><span class="zname">Blue</span><div class="bar"><span style="width:80%;background:#4A90D9;"></span></div><span class="time">1:08.9</span></div>
+          <div class="mock-zone-row"><span class="dot" style="background:#9B59B6;"></span><span class="zname">Purple</span><div class="bar"><span style="width:88%;background:#9B59B6;"></span></div><span class="time">1:04.2</span></div>
+          <div class="mock-zone-row"><span class="dot" style="background:#48BB78;"></span><span class="zname">Green</span><div class="bar"><span style="width:96%;background:#48BB78;"></span></div><span class="time">0:59.6</span></div>
+          <div class="mock-zone-row"><span class="dot" style="background:#F6AD55;"></span><span class="zname">Gold</span><div class="bar"><span style="width:100%;background:#F6AD55;"></span></div><span class="time">0:57.1</span></div>
+        </div>
+      </div>
+
+      <div class="mockup-card">
+        <div class="mockup-label"><i class="fas fa-users"></i> ...your whole squad, one table</div>
+        <table class="mock-table">
+          <thead><tr><th>Swimmer</th><th>Stroke</th><th>Course</th><th style="text-align:center;">White</th><th style="text-align:center;">Red</th><th style="text-align:center;">Purple</th></tr></thead>
+          <tbody>
+            <tr><td class="wname">Annabella</td><td>Free</td><td>LCM</td><td style="text-align:center;"><span class="zchip" style="background:#F0F0F0;color:#1A202C;">1:32.4</span></td><td style="text-align:center;"><span class="zchip" style="background:#FF6B6B;color:#fff;">1:12.4</span></td><td style="text-align:center;"><span class="zchip" style="background:#9B59B6;color:#fff;">1:04.2</span></td></tr>
+            <tr><td class="wname">Marcus</td><td>Fly</td><td>SCY</td><td style="text-align:center;"><span class="zchip" style="background:#F0F0F0;color:#1A202C;">1:22.7</span></td><td style="text-align:center;"><span class="zchip" style="background:#FF6B6B;color:#fff;">1:05.1</span></td><td style="text-align:center;"><span class="zchip" style="background:#9B59B6;color:#fff;">0:57.3</span></td></tr>
+            <tr><td class="wname">Priya</td><td>Back</td><td>LCM</td><td style="text-align:center;"><span class="zchip" style="background:#F0F0F0;color:#1A202C;">1:38.2</span></td><td style="text-align:center;"><span class="zchip" style="background:#FF6B6B;color:#fff;">1:18.6</span></td><td style="text-align:center;"><span class="zchip" style="background:#9B59B6;color:#fff;">1:09.5</span></td></tr>
+            <tr><td class="wname">Diego</td><td>Free</td><td>LCM</td><td style="text-align:center;"><span class="zchip" style="background:#F0F0F0;color:#1A202C;">1:20.8</span></td><td style="text-align:center;"><span class="zchip" style="background:#FF6B6B;color:#fff;">1:03.9</span></td><td style="text-align:center;"><span class="zchip" style="background:#9B59B6;color:#fff;">0:56.8</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Everything included</div>
+      <h2>Built for the way practice actually runs</h2>
+      <p>Not a generic timer app with a coach's name on it — every part of this is built around
+        how color-zone pacing is actually coached.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card"><i class="fas fa-bolt"></i><h3>Instant 7-zone charts</h3><p>One test time — 200, 400, 2000, or 3000 — produces every training zone at once, no lookup tables.</p></div>
+      <div class="feature-card"><i class="fas fa-ruler-horizontal"></i><h3>LCM, SCM &amp; SCY</h3><p>Tag every result by course and the distance units switch to match automatically.</p></div>
+      <div class="feature-card"><i class="fas fa-users"></i><h3>Squad Dashboard</h3><p>Your whole team in one searchable, sortable table — with multi-stroke and multi-course support per swimmer.</p></div>
+      <div class="feature-card"><i class="fas fa-sliders-h"></i><h3>Custom Set Builder</h3><p>Build tonight's actual set and every swimmer's numbers update to match instantly.</p></div>
+      <div class="feature-card"><i class="fas fa-tv"></i><h3>TV Mode</h3><p>A bold, glowing full-screen display built to be read from across the pool deck.</p></div>
+      <div class="feature-card"><i class="fas fa-lock"></i><h3>Totally offline &amp; private</h3><p>No server, no account, no athlete data ever leaving your own device. Backup and restore whenever you like.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Get it your way</div>
+      <h2>One tool. Two ways to get it.</h2>
+      <p>No trial, no feature gate between them — both routes get you the exact same app.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3>One-time purchase</h3>
+        <div class="price">£9.99 <small>once, ever</small></div>
+        <ul>
+          <li><i class="fas fa-check"></i> Full app, every feature, no gate</li>
+          <li><i class="fas fa-check"></i> Free updates to this version line</li>
+          <li><i class="fas fa-check"></i> Single-team license</li>
+          <li><i class="fas fa-check"></i> No subscription, ever</li>
+        </ul>
+        <a class="btn btn-primary" href="https://buymeacoffee.com/YOUR-USERNAME" target="_blank" rel="noopener">
+          <i class="fa-solid fa-mug-hot"></i> Buy on Buy Me a Coffee
+        </a>
+      </div>
+      <div class="price-card featured">
+        <h3>Patreon supporters</h3>
+        <div class="price">Free <small>with paid membership</small></div>
+        <ul>
+          <li><i class="fas fa-check"></i> Included as a thank-you perk</li>
+          <li><i class="fas fa-check"></i> Everything in the one-time purchase</li>
+          <li><i class="fas fa-check"></i> Support ongoing development</li>
+          <li><i class="fas fa-check"></i> Cancel anytime, keep your download</li>
+        </ul>
+        <a class="btn btn-secondary" href="https://patreon.com/YOUR-USERNAME" target="_blank" rel="noopener">
+          <i class="fa-brands fa-patreon"></i> Join on Patreon
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Questions</div>
+      <h2>Before you grab it</h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>Do I need to be online to use it?</summary>
+        <p>No. PaceDeck is a single file that runs entirely in your browser. Open it once and it
+          works with no internet connection from then on.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is my athletes' data safe?</summary>
+        <p>Everything stays in your own browser, on your own device. There's no server behind
+          PaceDeck, so there's nothing to breach and nothing to leak.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Does it work on my phone or tablet, not just a laptop?</summary>
+        <p>Yes — any modern browser on any device. No app store, no install.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What if I lose my data?</summary>
+        <p>Built-in backup and restore lets you export a file and reload it on this device or a
+          new one, any time.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is this tied to one specific coaching system by name?</summary>
+        <p>PaceDeck is built around the classic 7-zone color-coded pacing approach used widely in
+          swim coaching — it's an independent tool, not an official product of any individual
+          coach or program.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Why is it free for Patreon supporters but not everyone?</summary>
+        <p>It's a thank-you for people already supporting ongoing development. If you'd rather pay
+          once than join anything, the £9.99 one-time purchase gets you the exact same app.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="final-cta">
+      <h2>Get it before your next practice.</h2>
+      <p>One test time. Seven zones. One squad, all on the same page.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://buymeacoffee.com/YOUR-USERNAME" target="_blank" rel="noopener"><i class="fa-solid fa-mug-hot"></i> Get PaceDeck — £9.99</a>
+        <a class="btn btn-secondary" href="https://patreon.com/YOUR-USERNAME" target="_blank" rel="noopener"><i class="fa-brands fa-patreon"></i> Free for Patreon supporters</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-links">
+      <a href="https://buymeacoffee.com/YOUR-USERNAME" target="_blank" rel="noopener">Buy Me a Coffee</a>
+      <a href="https://patreon.com/YOUR-USERNAME" target="_blank" rel="noopener">Patreon</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <p>PaceDeck v1.2.0 · Independent tool, not affiliated with or endorsed by any individual coach or program.</p>
+  </div>
+</footer>
+
+</body>
+</html>
