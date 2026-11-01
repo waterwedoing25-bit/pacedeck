@@ -89,3 +89,11 @@ Support
 This is a self-contained tool with no ongoing subscription or account. If you run into a bug or
 have a feature request, keep a note of your version number (shown at the top and bottom of the
 app) when you report it.
+
+---
+
+## Support my work
+
+If PaceDeck helps you on deck, you can support my coaching resources here:
+
+<a href="https://www.buymeacoffee.com/waterwedoing" target="_blank" rel="noopener"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me a Coffee" style="height: 60px !important;width: 217px !important;" ></a>
